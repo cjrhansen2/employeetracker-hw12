@@ -216,7 +216,7 @@ function updateEmp() {
         console.table(res);
 
         var diffQuery = `SELECT rol.id, rol.title, rol.salary FROM role rol`
-
+// accessing different lists from the databases in order to properly update the employees
         conn_empdb.query(mysqlQuery, function (err, res) {
             if (err) throw err;
 
