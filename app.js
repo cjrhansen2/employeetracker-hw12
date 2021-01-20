@@ -67,7 +67,48 @@ function addRole() {
     
 }
 function addEmp() {
-    
+    var mysqlQuery = `SELECT rol.id, rol.title, rol.salary FROM role rol`
+
+    conn_empdb.query(mysqlQuery, function (err, res) {
+        if (err) throw err;
+        var roles = res.map( ({ id, title, salary }) => ({
+            value: id, title: `${title}`, salary: `${salary}`
+        }));
+        //prompt user with inquirer to ask for inputs about employee to add
+        inquirer.prompt([
+            {
+                type: "input",
+                name: "first_name",
+                message: "Please enter the employee's first name: "
+            },
+            {
+                type: "input",
+                name: "last_name",
+                message: "Please enter the employee's last name: "
+            },
+            {
+                type: "list",
+                name: "roleInput",
+                message: "Please enter the employee's role: ",
+                choices: roles
+            }
+        ]).then(function (answer) {
+            var otherQuery = `INSERT INTO employee SET ?`
+            conn_empdb.query(otherQuery,
+                {
+                    first_name: answer.first_name,
+                    last_name: answer.last_name,
+                    role_id: answer.roleInput
+                },
+                function (err, res) {
+                    if (err) throw err;
+                    //put the results into the table for the console
+                    console.table(res);
+                    //go back to original function for inquirer
+                    startInq();
+                });
+        });
+    });
 }
 function viewDept() {
     
