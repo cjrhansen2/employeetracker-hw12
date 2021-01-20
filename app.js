@@ -31,9 +31,6 @@ function startInq() {
     }).then(function ({ startmenu }) {
         //include all of the options listed in menu, connect with associated function, written below
         switch (startmenu) {
-            case "Add a Department":
-                addDept();
-                break;
             case "Add a Role":
                 addRole();
                 break;
@@ -60,11 +57,55 @@ function startInq() {
 }
 
 //Now write all the functions listed by startInq for each option that uses the mysql database
-function addDept() {
-
-}
 function addRole() {
-    
+    var mysqlQuery =
+        `SELECT dep.id, dep.name, rol.salary
+        FROM employee emp
+        JOIN role rol
+        ON emp.role_id = rol.id
+        JOIN department dep
+        ON dep.id = rol.department_id
+        GROUP BY dep.id, dep.name`
+    conn_empdb.query(mysqlQuery, function (err, res) {
+        if (err) throw err;
+        var depts = res.map(({ id, name }) => ({
+            value: id,
+            name: `${id} ${name}`
+        }));
+    console.table(res);
+    //prompt user to enter roles
+    inquirer.prompt([
+        {
+            type: "input",
+            name: "roleEntry",
+            message: "Please enter the name of the role you are adding: "
+        },
+        {
+            type: "input",
+            name: "salaryEntry",
+            message: "Please enter the salary of the role you are entering"
+        },
+        {
+            type: "list",
+            name: "deptEntry",
+            message: "Please select the department the role is a part of: ",
+            choices: depts
+        }
+    ]).then(function (answer) {
+        var anotherQuery = `INSERT INTO role SET ?`
+        conn_empdb.query(anotherQuery, {
+            title: answer.roleEntry,
+            salary: answer.salaryEntry,
+            department_id: answer.deptEntry
+        },
+        function (err, res) {
+            if (err) throw err;
+            console.table(res);
+            //again, return to first inquirer function
+            startInq();
+        });
+    });
+    });
 }
 function addEmp() {
     var mysqlQuery = `SELECT rol.id, rol.title, rol.salary FROM role rol`
@@ -111,10 +152,30 @@ function addEmp() {
     });
 }
 function viewDept() {
+    //make mysql query
+    var mysqlQuery =
+        `SELECT dep.name AS department
+        FROM department dep`
     
+    conn_empdb.query(mysqlQuery, function (err, res) {
+        if (err) throw (err);
+        console.table(res);
+        //go back to initial function, startInq
+        startInq();
+    });
 }
 function viewRole() {
+    //make mysql query
+    var mysqlQuery =
+        `SELECT rol.title
+        FROM role rol`
     
+    conn_empdb.query(mysqlQuery, function (err, res) {
+        if (err) throw (err);
+        console.table(res);
+        //go back to initial function, startInq
+        startInq();
+    });    
 }
 function viewEmp() {
     //make mysql query
@@ -136,7 +197,64 @@ function viewEmp() {
     });
 }
 function updateEmp() {
-    
+    var mysqlQuery =
+        `SELECT emp.id, emp.first_name, emp.last_name, rol.title, dep.name AS department, rol.salary, CONCAT(man.first_name, ' ', man.last_name) AS manager
+        FROM employee emp
+        JOIN role rol
+            ON emp.role_id = rol.id
+        JOIN department dep
+            ON dep.id = rol.department_id
+        JOIN employee man
+            ON man.id = emp.manager_id`
+
+        conn_empdb.query(mysqlQuery, function (err, res) {
+            if (err) throw err;
+            var employees = res.map(({ id, first_name, last_name}) => ({
+                value: id,
+                name: `${first_name} ${last_name}`
+            }));
+        console.table(res);
+
+        var diffQuery = `SELECT rol.id, rol.title, rol.salary FROM role rol`
+
+        conn_empdb.query(mysqlQuery, function (err, res) {
+            if (err) throw err;
+
+            rolesSelect = res.map(({ id, title, salary }) =>({
+                value: id,
+                title: `${title}`,
+                salary: `${salary}`
+            }));
+        console.table(res);
+
+        inquirer.prompt([
+            {
+                type: "list",
+                name: "empSelect",
+                message: "Please select the employee you wish to update: ",
+                choices: employees
+            },
+            {
+                type: "list",
+                name: "roleSelect",
+                message: "Please select the role you are updating",
+                choices: rolesSelect
+            }
+        ]).then(function (answer) {
+            var oneMoreQuery = `UPDATE employee SET role_id = ? WHERE id = ?`
+            conn_empdb.query(oneMoreQuery,
+                [answer.roleSelect,
+                answer.empSelect],
+                function (err, res) {
+                    if (err) throw err;
+                    console.table(res);
+
+                //back to the first function, startInq
+                    startInq();
+                });
+        });
+        });
+        });
 }
 
 //connect and run the inquirer functions written above
